@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: Navalis.io
+  mvc:
+    problemdetails:
+      enabled: true
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:${CHAVE_POSTGRES_PORT}/${CHAVE_POSTGRES_DB}
+    username: ${CHAVE_POSTGRES_USER}
+    password: ${CHAVE_POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  web:
+    error:
+      include-stacktrace: never
+
+server:
+  port: 5000
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
