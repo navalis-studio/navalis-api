@@ -17,6 +17,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  flyway:
+    enabled: true
   web:
     error:
       include-stacktrace: never
@@ -29,3 +31,6 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+jwt:
+  secret: ${JWT_SECRET:navalis-default-secret-key-that-should-be-changed-in-production}
