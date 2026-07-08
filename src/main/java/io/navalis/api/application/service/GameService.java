@@ -15,7 +15,10 @@ import io.navalis.api.domain.port.GameRepository;
 import io.navalis.api.infrastructure.persistence.entity.GameEntity;
 import io.navalis.api.infrastructure.persistence.repository.JpaGameRepository;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class GameService {
+
+    private static final Logger logger = LoggerFactory.getLogger(GameService.class);
 
     private final GameRepository gameRepository;
     private final JpaGameRepository jpaGameRepository;
@@ -109,17 +114,22 @@ public class GameService {
                 .toList();
     }
 
+    @Transactional
     public void cancelGame(UUID gameId, UUID playerId) {
+        logger.info("cancelGame chamado: gameId={}, playerId={}", gameId, playerId);
         Game game = activeGames.get(gameId);
         if (game == null) {
-            throw new DomainException("Partida não encontrada: " + gameId);
+            logger.info("Game não encontrado em activeGames, deletando do banco");
+            jpaGameRepository.deleteById(gameId);
+            return;
         }
-        if (!game.getPlayer1().getId().equals(playerId)) {
-            throw new DomainException("Apenas o criador pode cancelar a partida.");
+
+        // Only allow cancel before game is in progress
+        if (game.getStatus() == GameStatus.IN_PROGRESS || game.getStatus() == GameStatus.FINISHED) {
+            throw new DomainException("Não é possível cancelar uma partida em andamento.");
         }
-        if (game.getStatus() != GameStatus.WAITING_FOR_OPPONENT) {
-            throw new DomainException("Só é possível cancelar partidas aguardando oponente.");
-        }
+
+        logger.info("Removendo game {} do activeGames e do banco", gameId);
         activeGames.remove(gameId);
         jpaGameRepository.deleteById(gameId);
     }

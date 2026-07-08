@@ -48,6 +48,6 @@ public class JpaGameRepository implements GameRepository {
     }
 
     public void deleteById(UUID id) {
-        springDataRepo.deleteById(id);
+        springDataRepo.deleteGameById(id);
     }
 }

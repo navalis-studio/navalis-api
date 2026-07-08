@@ -18,4 +18,9 @@ public interface SpringDataGameRepository extends JpaRepository<GameEntity, UUID
     @Transactional
     @Query("DELETE FROM GameEntity g WHERE g.status IN :statuses")
     void deleteByStatusIn(List<String> statuses);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM GameEntity g WHERE g.id = :id")
+    void deleteGameById(UUID id);
 }
