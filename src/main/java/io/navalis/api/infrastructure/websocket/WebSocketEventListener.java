@@ -48,7 +48,7 @@ public class WebSocketEventListener {
             Game game = gameService.forfeit(gameId, playerId);
 
             if (game != null) {
-                // Notify the remaining player of the WO victory
+                // WO: game was IN_PROGRESS, remaining player wins
                 Map<String, Object> notification = new HashMap<>();
                 notification.put("type", "OPPONENT_DISCONNECTED");
                 notification.put("quitterId", playerId.toString());
@@ -57,6 +57,14 @@ public class WebSocketEventListener {
                 messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
 
                 logger.info("WO: jogador {} abandonou partida {}. Vencedor: {}", playerId, gameId, game.getWinnerId());
+            } else {
+                // Game was cancelled (WAITING or PLACING_SHIPS), notify opponent to return to lobby
+                Map<String, Object> notification = new HashMap<>();
+                notification.put("type", "GAME_CANCELLED");
+                notification.put("quitterId", playerId.toString());
+                messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
+
+                logger.info("Partida {} cancelada pelo jogador {}", gameId, playerId);
             }
         } catch (Exception e) {
             logger.error("Erro ao processar desconexão: {}", e.getMessage());

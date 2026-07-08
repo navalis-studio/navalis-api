@@ -130,25 +130,28 @@ public class GameService {
     }
 
     /**
-     * Handle player forfeit/disconnect (WO).
-     * Returns the game if it was active and forfeited, null otherwise.
+     * Handle player forfeit/disconnect.
+     * - WAITING_FOR_OPPONENT: just cancel (delete from DB)
+     * - PLACING_SHIPS: cancel the match, both players return to lobby
+     * - IN_PROGRESS: WO - remaining player wins
      */
     public Game forfeit(UUID gameId, UUID quitterId) {
         Game game = activeGames.get(gameId);
         if (game == null) return null;
         if (game.getStatus() == GameStatus.FINISHED) return null;
 
-        // Only forfeit if both players joined (otherwise just cancel)
-        if (game.getPlayer2() == null) {
+        // Only count as WO victory if game was in progress
+        if (game.getStatus() == GameStatus.IN_PROGRESS) {
+            game.forfeit(quitterId);
+            gameRepository.save(game);
             activeGames.remove(gameId);
-            jpaGameRepository.deleteById(gameId);
-            return null;
+            return game;
         }
 
-        game.forfeit(quitterId);
-        gameRepository.save(game);
+        // WAITING_FOR_OPPONENT or PLACING_SHIPS: just cancel, no winner
         activeGames.remove(gameId);
-        return game;
+        jpaGameRepository.deleteById(gameId);
+        return null;
     }
 
     /**
