@@ -14,7 +14,9 @@ import io.navalis.api.domain.model.ShotResult;
 import io.navalis.api.domain.port.GameRepository;
 import io.navalis.api.infrastructure.persistence.entity.GameEntity;
 import io.navalis.api.infrastructure.persistence.repository.JpaGameRepository;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -31,14 +33,15 @@ public class GameService {
     public GameService(GameRepository gameRepository, JpaGameRepository jpaGameRepository) {
         this.gameRepository = gameRepository;
         this.jpaGameRepository = jpaGameRepository;
-        cleanOrphanedGames();
     }
 
     /**
      * On startup, remove games that were left in non-final states (WAITING/PLACING/IN_PROGRESS)
      * since they only live in memory and are lost on restart.
      */
-    private void cleanOrphanedGames() {
+    @PostConstruct
+    @Transactional
+    public void cleanOrphanedGames() {
         List<String> nonFinalStatuses = List.of(
                 GameStatus.WAITING_FOR_OPPONENT.name(),
                 GameStatus.PLACING_SHIPS.name(),
