@@ -54,6 +54,7 @@ public class GameWebSocketController {
         if (gameInfo.status() == GameStatus.IN_PROGRESS) {
             notification.put("type", "GAME_STARTED");
             notification.put("message", "Ambos prontos. Partida iniciada!");
+            notification.put("firstPlayerId", gameService.getCurrentTurnPlayerId(gameId).toString());
         } else {
             notification.put("type", "PLAYER_READY");
             notification.put("playerId", playerId.toString());

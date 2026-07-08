@@ -42,4 +42,8 @@ public class JpaGameRepository implements GameRepository {
     public List<GameEntity> findByStatus(String status) {
         return springDataRepo.findByStatus(status);
     }
+
+    public void deleteById(UUID id) {
+        springDataRepo.deleteById(id);
+    }
 }

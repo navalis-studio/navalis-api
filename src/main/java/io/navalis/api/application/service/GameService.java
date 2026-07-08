@@ -89,9 +89,29 @@ public class GameService {
                 .toList();
     }
 
+    public void cancelGame(UUID gameId, UUID playerId) {
+        Game game = activeGames.get(gameId);
+        if (game == null) {
+            throw new DomainException("Partida não encontrada: " + gameId);
+        }
+        if (!game.getPlayer1().getId().equals(playerId)) {
+            throw new DomainException("Apenas o criador pode cancelar a partida.");
+        }
+        if (game.getStatus() != GameStatus.WAITING_FOR_OPPONENT) {
+            throw new DomainException("Só é possível cancelar partidas aguardando oponente.");
+        }
+        activeGames.remove(gameId);
+        jpaGameRepository.deleteById(gameId);
+    }
+
     public GameResponse getGameInfo(UUID gameId) {
         Game game = getActiveGame(gameId);
         return new GameResponse(gameId, game.getStatus(), null);
+    }
+
+    public UUID getCurrentTurnPlayerId(UUID gameId) {
+        Game game = getActiveGame(gameId);
+        return game.getCurrentTurnPlayerId();
     }
 
     private Game getActiveGame(UUID gameId) {
