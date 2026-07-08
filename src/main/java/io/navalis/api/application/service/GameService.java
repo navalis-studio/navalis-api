@@ -16,7 +16,6 @@ import io.navalis.api.infrastructure.persistence.entity.GameEntity;
 import io.navalis.api.infrastructure.persistence.repository.JpaGameRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -40,17 +39,13 @@ public class GameService {
      * since they only live in memory and are lost on restart.
      */
     @PostConstruct
-    @Transactional
     public void cleanOrphanedGames() {
         List<String> nonFinalStatuses = List.of(
                 GameStatus.WAITING_FOR_OPPONENT.name(),
                 GameStatus.PLACING_SHIPS.name(),
                 GameStatus.IN_PROGRESS.name()
         );
-        for (String status : nonFinalStatuses) {
-            List<GameEntity> orphaned = jpaGameRepository.findByStatus(status);
-            orphaned.forEach(entity -> jpaGameRepository.deleteById(entity.getId()));
-        }
+        jpaGameRepository.deleteByStatusIn(nonFinalStatuses);
     }
 
     public GameResponse createGame(UUID playerId) {
