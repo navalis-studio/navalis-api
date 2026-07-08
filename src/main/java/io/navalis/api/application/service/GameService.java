@@ -31,6 +31,23 @@ public class GameService {
     public GameService(GameRepository gameRepository, JpaGameRepository jpaGameRepository) {
         this.gameRepository = gameRepository;
         this.jpaGameRepository = jpaGameRepository;
+        cleanOrphanedGames();
+    }
+
+    /**
+     * On startup, remove games that were left in non-final states (WAITING/PLACING/IN_PROGRESS)
+     * since they only live in memory and are lost on restart.
+     */
+    private void cleanOrphanedGames() {
+        List<String> nonFinalStatuses = List.of(
+                GameStatus.WAITING_FOR_OPPONENT.name(),
+                GameStatus.PLACING_SHIPS.name(),
+                GameStatus.IN_PROGRESS.name()
+        );
+        for (String status : nonFinalStatuses) {
+            List<GameEntity> orphaned = jpaGameRepository.findByStatus(status);
+            orphaned.forEach(entity -> jpaGameRepository.deleteById(entity.getId()));
+        }
     }
 
     public GameResponse createGame(UUID playerId) {
