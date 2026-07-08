@@ -129,6 +129,40 @@ public class GameService {
         return new GameResponse(gameId, game.getStatus(), null);
     }
 
+    /**
+     * Handle player forfeit/disconnect (WO).
+     * Returns the game if it was active and forfeited, null otherwise.
+     */
+    public Game forfeit(UUID gameId, UUID quitterId) {
+        Game game = activeGames.get(gameId);
+        if (game == null) return null;
+        if (game.getStatus() == GameStatus.FINISHED) return null;
+
+        // Only forfeit if both players joined (otherwise just cancel)
+        if (game.getPlayer2() == null) {
+            activeGames.remove(gameId);
+            jpaGameRepository.deleteById(gameId);
+            return null;
+        }
+
+        game.forfeit(quitterId);
+        gameRepository.save(game);
+        activeGames.remove(gameId);
+        return game;
+    }
+
+    /**
+     * Find the gameId a player is currently in.
+     */
+    public UUID findGameByPlayer(UUID playerId) {
+        for (var entry : activeGames.entrySet()) {
+            Game game = entry.getValue();
+            if (game.getPlayer1().getId().equals(playerId)) return entry.getKey();
+            if (game.getPlayer2() != null && game.getPlayer2().getId().equals(playerId)) return entry.getKey();
+        }
+        return null;
+    }
+
     public UUID getCurrentTurnPlayerId(UUID gameId) {
         Game game = getActiveGame(gameId);
         return game.getCurrentTurnPlayerId();

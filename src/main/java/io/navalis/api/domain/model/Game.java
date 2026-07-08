@@ -79,6 +79,16 @@ public class Game {
         return result;
     }
 
+    /**
+     * Forfeit (WO): the player who disconnects/abandons loses,
+     * the remaining player wins automatically.
+     */
+    public void forfeit(UUID quitterId) {
+        if (status == GameStatus.FINISHED) return;
+        this.status = GameStatus.FINISHED;
+        this.winnerId = getOpponent(quitterId).getId();
+    }
+
     private Player getPlayerById(UUID playerId) {
         if (player1.getId().equals(playerId)) {
             return player1;
