@@ -9,8 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
@@ -36,15 +34,8 @@ public class GameEntity implements Persistable<UUID> {
     @Column(nullable = false, length = 30)
     private String status;
 
-    @Column(name = "current_turn_player_id")
-    private UUID currentTurnPlayerId;
-
     @Column(name = "winner_id")
     private UUID winnerId;
-
-    @Column(name = "game_state", columnDefinition = "jsonb")
-    @JdbcTypeCode(SqlTypes.JSON)
-    private String gameState;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

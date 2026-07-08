@@ -37,7 +37,7 @@ public class GameService {
         UUID gameId = UUID.randomUUID();
         Game game = Game.create(gameId, playerId);
         activeGames.put(gameId, game);
-        gameRepository.save(game);
+        gameRepository.save(game); // Persist for listing available games
 
         return new GameResponse(gameId, game.getStatus(), "Partida criada. Aguardando oponente.");
     }
@@ -45,7 +45,7 @@ public class GameService {
     public GameResponse joinGame(UUID gameId, UUID playerId) {
         Game game = getActiveGame(gameId);
         game.join(playerId);
-        gameRepository.save(game);
+        gameRepository.save(game); // Persist player2 joining
 
         return new GameResponse(gameId, game.getStatus(), "Oponente entrou. Posicione seus navios!");
     }
@@ -54,20 +54,19 @@ public class GameService {
         Game game = getActiveGame(gameId);
         Coordinate start = new Coordinate(request.row(), request.col());
         game.placeShip(playerId, request.shipType(), start, request.orientation());
-        gameRepository.save(game);
+        // No DB save - gameplay state lives in memory only
     }
 
     public void markReady(UUID gameId, UUID playerId) {
         Game game = getActiveGame(gameId);
         game.markReady(playerId);
-        gameRepository.save(game);
+        // No DB save - status transition handled in memory
     }
 
     public ShotResponse fire(UUID gameId, UUID playerId, FireRequest request) {
         Game game = getActiveGame(gameId);
         Coordinate target = new Coordinate(request.row(), request.col());
         ShotResult result = game.fire(playerId, target);
-        gameRepository.save(game);
 
         ShipType sunkShipType = null;
         if (result == ShotResult.SUNK) {
@@ -75,6 +74,12 @@ public class GameService {
         }
 
         boolean gameOver = game.getStatus() == GameStatus.FINISHED;
+
+        // Only persist when game ends (save result)
+        if (gameOver) {
+            gameRepository.save(game);
+            activeGames.remove(gameId);
+        }
 
         return new ShotResponse(result, sunkShipType, gameOver, game.getWinnerId());
     }
