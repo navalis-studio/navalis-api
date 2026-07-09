@@ -15,7 +15,7 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Navalis.io API")
+                        .title("Navalis API")
                         .description("API do jogo de Batalha Naval online")
                         .version("1.0.0"))
                 .addSecurityItem(new SecurityRequirement().addList("Bearer Token"))

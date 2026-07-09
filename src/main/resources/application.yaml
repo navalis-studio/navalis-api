@@ -1,6 +1,6 @@
 spring:
   application:
-    name: Navalis.io
+    name: Navalis
   mvc:
     problemdetails:
       enabled: true
