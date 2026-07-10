@@ -66,6 +66,13 @@ public class GameController {
     @DeleteMapping("/{gameId}")
     public ResponseEntity<Void> cancelGame(@PathVariable UUID gameId, Principal principal) {
         UUID playerId = UUID.fromString(principal.getName());
+
+        // Notify the opponent that the game was cancelled BEFORE removing it
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("type", "GAME_CANCELLED");
+        notification.put("quitterId", playerId.toString());
+        messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
+
         gameService.cancelGame(gameId, playerId);
         return ResponseEntity.noContent().build();
     }
