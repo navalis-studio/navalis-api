@@ -12,14 +12,15 @@ import io.navalis.api.domain.model.Ship;
 import io.navalis.api.domain.model.ShipType;
 import io.navalis.api.domain.model.ShotResult;
 import io.navalis.api.domain.port.GameRepository;
-import io.navalis.api.infrastructure.persistence.entity.GameEntity;
 import io.navalis.api.infrastructure.persistence.repository.JpaGameRepository;
+import io.navalis.api.infrastructure.persistence.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,14 +30,19 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GameService {
 
     private static final Logger logger = LoggerFactory.getLogger(GameService.class);
+    private static final String ROOM_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final int ROOM_CODE_LENGTH = 6;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final GameRepository gameRepository;
     private final JpaGameRepository jpaGameRepository;
+    private final UserRepository userRepository;
     private final Map<UUID, Game> activeGames = new ConcurrentHashMap<>();
 
-    public GameService(GameRepository gameRepository, JpaGameRepository jpaGameRepository) {
+    public GameService(GameRepository gameRepository, JpaGameRepository jpaGameRepository, UserRepository userRepository) {
         this.gameRepository = gameRepository;
         this.jpaGameRepository = jpaGameRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -55,11 +61,12 @@ public class GameService {
 
     public GameResponse createGame(UUID playerId) {
         UUID gameId = UUID.randomUUID();
-        Game game = Game.create(gameId, playerId);
+        String roomCode = generateRoomCode();
+        Game game = Game.create(gameId, roomCode, playerId);
         activeGames.put(gameId, game);
         gameRepository.save(game); // Persist for listing available games
 
-        return new GameResponse(gameId, game.getStatus(), "Partida criada. Aguardando oponente.");
+        return new GameResponse(gameId, roomCode, game.getStatus(), "Partida criada. Aguardando oponente.", null);
     }
 
     public GameResponse joinGame(UUID gameId, UUID playerId) {
@@ -67,7 +74,16 @@ public class GameService {
         game.join(playerId);
         gameRepository.save(game); // Persist player2 joining
 
-        return new GameResponse(gameId, game.getStatus(), "Oponente entrou. Posicione seus navios!");
+        return new GameResponse(gameId, game.getRoomCode(), game.getStatus(), "Oponente entrou. Posicione seus navios!", null);
+    }
+
+    public GameResponse joinByRoomCode(String roomCode, UUID playerId) {
+        Game game = findActiveGameByRoomCode(roomCode);
+        UUID gameId = game.getId();
+        game.join(playerId);
+        gameRepository.save(game);
+
+        return new GameResponse(gameId, game.getRoomCode(), game.getStatus(), "Oponente entrou. Posicione seus navios!", null);
     }
 
     public void placeShip(UUID gameId, UUID playerId, PlaceShipRequest request) {
@@ -98,6 +114,7 @@ public class GameService {
         // Only persist when game ends (save result)
         if (gameOver) {
             gameRepository.save(game);
+            updatePlayerStats(game.getWinnerId(), getLoser(game));
             activeGames.remove(gameId);
         }
 
@@ -105,12 +122,14 @@ public class GameService {
     }
 
     public List<GameResponse> findAvailableGames() {
-        List<GameEntity> waitingGames = jpaGameRepository.findByStatus(GameStatus.WAITING_FOR_OPPONENT.name());
-        return waitingGames.stream()
-                .map(entity -> new GameResponse(
-                        entity.getId(),
-                        GameStatus.valueOf(entity.getStatus()),
-                        "Aguardando oponente."))
+        List<Object[]> results = jpaGameRepository.findByStatusWithHostUsername(GameStatus.WAITING_FOR_OPPONENT.name());
+        return results.stream()
+                .map(row -> new GameResponse(
+                        (UUID) row[0],
+                        (String) row[1],
+                        GameStatus.valueOf((String) row[2]),
+                        null,
+                        (String) row[3]))
                 .toList();
     }
 
@@ -136,7 +155,7 @@ public class GameService {
 
     public GameResponse getGameInfo(UUID gameId) {
         Game game = getActiveGame(gameId);
-        return new GameResponse(gameId, game.getStatus(), null);
+        return new GameResponse(gameId, game.getRoomCode(), game.getStatus(), null, null);
     }
 
     /**
@@ -154,6 +173,7 @@ public class GameService {
         if (game.getStatus() == GameStatus.IN_PROGRESS) {
             game.forfeit(quitterId);
             gameRepository.save(game);
+            updatePlayerStats(game.getWinnerId(), quitterId);
             activeGames.remove(gameId);
             return game;
         }
@@ -202,5 +222,41 @@ public class GameService {
             }
         }
         return null;
+    }
+
+    private String generateRoomCode() {
+        StringBuilder code = new StringBuilder(ROOM_CODE_LENGTH);
+        for (int i = 0; i < ROOM_CODE_LENGTH; i++) {
+            code.append(ROOM_CODE_CHARS.charAt(RANDOM.nextInt(ROOM_CODE_CHARS.length())));
+        }
+        return code.toString();
+    }
+
+    private Game findActiveGameByRoomCode(String roomCode) {
+        for (Game game : activeGames.values()) {
+            if (game.getRoomCode().equalsIgnoreCase(roomCode)) {
+                return game;
+            }
+        }
+        throw new DomainException("Sala não encontrada: " + roomCode);
+    }
+
+    private void updatePlayerStats(UUID winnerId, UUID loserId) {
+        userRepository.findById(winnerId).ifPresent(winner -> {
+            winner.setWins(winner.getWins() + 1);
+            userRepository.save(winner);
+        });
+        userRepository.findById(loserId).ifPresent(loser -> {
+            loser.setLosses(loser.getLosses() + 1);
+            userRepository.save(loser);
+        });
+    }
+
+    private UUID getLoser(Game game) {
+        UUID winnerId = game.getWinnerId();
+        if (game.getPlayer1().getId().equals(winnerId)) {
+            return game.getPlayer2().getId();
+        }
+        return game.getPlayer1().getId();
     }
 }
