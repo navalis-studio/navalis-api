@@ -9,21 +9,23 @@ import java.util.UUID;
 public class Game {
 
     private final UUID id;
+    private final String roomCode;
     private final Player player1;
     private Player player2;
     private GameStatus status;
     private UUID currentTurnPlayerId;
     private UUID winnerId;
 
-    private Game(UUID id, Player player1) {
+    private Game(UUID id, String roomCode, Player player1) {
         this.id = id;
+        this.roomCode = roomCode;
         this.player1 = player1;
         this.status = GameStatus.WAITING_FOR_OPPONENT;
     }
 
-    public static Game create(UUID id, UUID playerId) {
+    public static Game create(UUID id, String roomCode, UUID playerId) {
         Player player = new Player(playerId);
-        return new Game(id, player);
+        return new Game(id, roomCode, player);
     }
 
     public void join(UUID playerId) {
@@ -108,6 +110,10 @@ public class Game {
 
     public UUID getId() {
         return id;
+    }
+
+    public String getRoomCode() {
+        return roomCode;
     }
 
     public Player getPlayer1() {

@@ -43,6 +43,10 @@ public class JpaGameRepository implements GameRepository {
         return springDataRepo.findByStatus(status);
     }
 
+    public List<Object[]> findByStatusWithHostUsername(String status) {
+        return springDataRepo.findByStatusWithHostUsername(status);
+    }
+
     public void deleteByStatusIn(List<String> statuses) {
         springDataRepo.deleteByStatusIn(statuses);
     }

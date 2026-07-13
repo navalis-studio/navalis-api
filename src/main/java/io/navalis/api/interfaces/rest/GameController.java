@@ -51,6 +51,20 @@ public class GameController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/join/{roomCode}")
+    public ResponseEntity<GameResponse> joinByRoomCode(@PathVariable String roomCode, Principal principal) {
+        UUID playerId = UUID.fromString(principal.getName());
+        GameResponse response = gameService.joinByRoomCode(roomCode.toUpperCase(), playerId);
+
+        // Notify the game room that an opponent has joined
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("type", "OPPONENT_JOINED");
+        notification.put("playerId", playerId.toString());
+        messagingTemplate.convertAndSend("/topic/game/" + response.gameId(), (Object) notification);
+
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/available")
     public ResponseEntity<List<GameResponse>> findAvailableGames() {
         List<GameResponse> games = gameService.findAvailableGames();

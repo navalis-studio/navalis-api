@@ -13,6 +13,7 @@ public class GameMapper {
     public GameEntity toEntity(Game game) {
         GameEntity entity = new GameEntity();
         entity.setId(game.getId());
+        entity.setRoomCode(game.getRoomCode());
         entity.setPlayer1Id(game.getPlayer1().getId());
         entity.setPlayer2Id(game.getPlayer2() != null ? game.getPlayer2().getId() : null);
         entity.setStatus(game.getStatus().name());

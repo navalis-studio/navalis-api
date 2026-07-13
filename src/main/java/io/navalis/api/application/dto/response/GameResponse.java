@@ -6,6 +6,8 @@ import java.util.UUID;
 
 public record GameResponse(
         UUID gameId,
+        String roomCode,
         GameStatus status,
-        String message
+        String message,
+        String hostUsername
 ) {}

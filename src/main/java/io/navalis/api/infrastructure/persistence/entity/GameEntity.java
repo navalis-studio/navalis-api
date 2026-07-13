@@ -25,6 +25,9 @@ public class GameEntity implements Persistable<UUID> {
     @Id
     private UUID id;
 
+    @Column(name = "room_code", nullable = false, length = 6)
+    private String roomCode;
+
     @Column(name = "player1_id", nullable = false)
     private UUID player1Id;
 
