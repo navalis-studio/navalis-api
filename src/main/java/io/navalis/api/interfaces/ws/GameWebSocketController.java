@@ -77,6 +77,7 @@ public class GameWebSocketController {
         notification.put("col", request.col());
         notification.put("result", response.result().name());
         notification.put("sunkShipType", response.sunkShipType() != null ? response.sunkShipType().name() : null);
+        notification.put("sunkShipCells", response.sunkShipCells());
         notification.put("gameOver", response.gameOver());
         notification.put("winnerId", response.winnerId() != null ? response.winnerId().toString() : null);
 
