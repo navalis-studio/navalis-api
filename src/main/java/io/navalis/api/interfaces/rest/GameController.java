@@ -1,7 +1,9 @@
 package io.navalis.api.interfaces.rest;
 
 import io.navalis.api.application.dto.response.GameResponse;
+import io.navalis.api.application.dto.response.ReconnectResponse;
 import io.navalis.api.application.service.GameService;
+import io.navalis.api.domain.model.Game;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -71,6 +73,16 @@ public class GameController {
         return ResponseEntity.ok(games);
     }
 
+    @GetMapping("/active")
+    public ResponseEntity<ReconnectResponse> getActiveGame(Principal principal) {
+        UUID playerId = UUID.fromString(principal.getName());
+        ReconnectResponse response = gameService.getReconnectData(playerId);
+        if (response == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{gameId}")
     public ResponseEntity<GameResponse> getGameInfo(@PathVariable UUID gameId) {
         GameResponse response = gameService.getGameInfo(gameId);
@@ -88,6 +100,25 @@ public class GameController {
         messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
 
         gameService.cancelGame(gameId, playerId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{gameId}/forfeit")
+    public ResponseEntity<Void> forfeitGame(@PathVariable UUID gameId, Principal principal) {
+        UUID playerId = UUID.fromString(principal.getName());
+
+        var game = gameService.forfeit(gameId, playerId);
+
+        if (game != null) {
+            // WO: notify opponent of victory
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("type", "OPPONENT_DISCONNECTED");
+            notification.put("quitterId", playerId.toString());
+            notification.put("winnerId", game.getWinnerId().toString());
+            notification.put("gameOver", true);
+            messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
+        }
+
         return ResponseEntity.noContent().build();
     }
 }
