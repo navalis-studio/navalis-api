@@ -3,11 +3,14 @@ package io.navalis.api.application.service;
 import io.navalis.api.application.dto.request.FireRequest;
 import io.navalis.api.application.dto.request.PlaceShipRequest;
 import io.navalis.api.application.dto.response.GameResponse;
+import io.navalis.api.application.dto.response.ReconnectResponse;
 import io.navalis.api.application.dto.response.ShotResponse;
 import io.navalis.api.domain.exception.DomainException;
 import io.navalis.api.domain.model.Coordinate;
 import io.navalis.api.domain.model.Game;
 import io.navalis.api.domain.model.GameStatus;
+import io.navalis.api.domain.model.CellState;
+import io.navalis.api.domain.model.Orientation;
 import io.navalis.api.domain.model.Ship;
 import io.navalis.api.domain.model.ShipType;
 import io.navalis.api.domain.model.ShotResult;
@@ -21,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -105,8 +109,23 @@ public class GameService {
         ShotResult result = game.fire(playerId, target);
 
         ShipType sunkShipType = null;
+        List<int[]> sunkShipCells = null;
         if (result == ShotResult.SUNK) {
             sunkShipType = findSunkShipAt(game, playerId, target);
+            // Get all coordinates of the sunk ship
+            var opponent = game.getPlayer1().getId().equals(playerId)
+                    ? game.getPlayer2()
+                    : game.getPlayer1();
+            if (opponent != null) {
+                for (Ship ship : opponent.getBoard().getShips()) {
+                    if (ship.isSunk() && ship.getOccupiedCoordinates().contains(target)) {
+                        sunkShipCells = ship.getOccupiedCoordinates().stream()
+                                .map(c -> new int[]{c.row(), c.col()})
+                                .toList();
+                        break;
+                    }
+                }
+            }
         }
 
         boolean gameOver = game.getStatus() == GameStatus.FINISHED;
@@ -118,7 +137,7 @@ public class GameService {
             activeGames.remove(gameId);
         }
 
-        return new ShotResponse(result, sunkShipType, gameOver, game.getWinnerId());
+        return new ShotResponse(result, sunkShipType, sunkShipCells, gameOver, game.getWinnerId());
     }
 
     public List<GameResponse> findAvailableGames() {
@@ -199,6 +218,90 @@ public class GameService {
     public UUID getCurrentTurnPlayerId(UUID gameId) {
         Game game = getActiveGame(gameId);
         return game.getCurrentTurnPlayerId();
+    }
+
+    /**
+     * Build reconnect data for a player returning to an active game.
+     */
+    public ReconnectResponse getReconnectData(UUID playerId) {
+        UUID gameId = findGameByPlayer(playerId);
+        if (gameId == null) return null;
+
+        Game game = activeGames.get(gameId);
+        if (game == null) return null;
+        if (game.getStatus() == GameStatus.FINISHED) return null;
+
+        var player = game.getPlayer1().getId().equals(playerId) ? game.getPlayer1() : game.getPlayer2();
+        var opponent = game.getPlayer1().getId().equals(playerId) ? game.getPlayer2() : game.getPlayer1();
+
+        // My ships
+        List<ReconnectResponse.ShipData> myShips = new ArrayList<>();
+        for (Ship ship : player.getBoard().getShips()) {
+            myShips.add(new ReconnectResponse.ShipData(
+                    ship.getType().name(),
+                    ship.getStart().row(),
+                    ship.getStart().col(),
+                    ship.getOrientation().name()
+            ));
+        }
+
+        // Shots I fired at enemy (opponent's board shots)
+        List<ReconnectResponse.ShotData> myShots = new ArrayList<>();
+        if (opponent != null) {
+            for (var entry : opponent.getBoard().getShots().entrySet()) {
+                myShots.add(new ReconnectResponse.ShotData(
+                        entry.getKey().row(),
+                        entry.getKey().col(),
+                        entry.getValue().name()
+                ));
+            }
+        }
+
+        // Shots enemy fired at me (my board shots)
+        List<ReconnectResponse.ShotData> enemyShots = new ArrayList<>();
+        for (var entry : player.getBoard().getShots().entrySet()) {
+            enemyShots.add(new ReconnectResponse.ShotData(
+                    entry.getKey().row(),
+                    entry.getKey().col(),
+                    entry.getValue().name()
+            ));
+        }
+
+        // Sunk enemy ships
+        List<String> sunkEnemyShips = new ArrayList<>();
+        if (opponent != null) {
+            for (Ship ship : opponent.getBoard().getShips()) {
+                if (ship.isSunk()) {
+                    sunkEnemyShips.add(ship.getType().name());
+                }
+            }
+        }
+
+        // My sunk ships
+        List<String> sunkMyShips = new ArrayList<>();
+        for (Ship ship : player.getBoard().getShips()) {
+            if (ship.isSunk()) {
+                sunkMyShips.add(ship.getType().name());
+            }
+        }
+
+        boolean myTurn = playerId.equals(game.getCurrentTurnPlayerId());
+        boolean opponentReady = opponent != null && opponent.isReady();
+        boolean myReady = player.isReady();
+
+        return new ReconnectResponse(
+                gameId,
+                game.getRoomCode(),
+                game.getStatus(),
+                myTurn,
+                myShips,
+                myShots,
+                enemyShots,
+                sunkEnemyShips,
+                sunkMyShips,
+                opponentReady,
+                myReady
+        );
     }
 
     private Game getActiveGame(UUID gameId) {
