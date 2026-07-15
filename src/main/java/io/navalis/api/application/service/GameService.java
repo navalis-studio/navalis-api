@@ -78,7 +78,9 @@ public class GameService {
         game.join(playerId);
         gameRepository.save(game); // Persist player2 joining
 
-        return new GameResponse(gameId, game.getRoomCode(), game.getStatus(), "Oponente entrou. Posicione seus navios!", null);
+        String hostUsername = userRepository.findById(game.getPlayer1().getId())
+                .map(u -> u.getUsername()).orElse(null);
+        return new GameResponse(gameId, game.getRoomCode(), game.getStatus(), "Oponente entrou. Posicione seus navios!", hostUsername);
     }
 
     public GameResponse joinByRoomCode(String roomCode, UUID playerId) {
@@ -87,7 +89,9 @@ public class GameService {
         game.join(playerId);
         gameRepository.save(game);
 
-        return new GameResponse(gameId, game.getRoomCode(), game.getStatus(), "Oponente entrou. Posicione seus navios!", null);
+        String hostUsername = userRepository.findById(game.getPlayer1().getId())
+                .map(u -> u.getUsername()).orElse(null);
+        return new GameResponse(gameId, game.getRoomCode(), game.getStatus(), "Oponente entrou. Posicione seus navios!", hostUsername);
     }
 
     public void placeShip(UUID gameId, UUID playerId, PlaceShipRequest request) {
@@ -289,6 +293,10 @@ public class GameService {
         boolean opponentReady = opponent != null && opponent.isReady();
         boolean myReady = player.isReady();
 
+        String opponentUsername = opponent != null
+                ? userRepository.findById(opponent.getId()).map(u -> u.getUsername()).orElse("Oponente")
+                : null;
+
         return new ReconnectResponse(
                 gameId,
                 game.getRoomCode(),
@@ -300,7 +308,8 @@ public class GameService {
                 sunkEnemyShips,
                 sunkMyShips,
                 opponentReady,
-                myReady
+                myReady,
+                opponentUsername
         );
     }
 

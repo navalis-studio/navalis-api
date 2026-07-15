@@ -4,6 +4,7 @@ import io.navalis.api.application.dto.response.GameResponse;
 import io.navalis.api.application.dto.response.ReconnectResponse;
 import io.navalis.api.application.service.GameService;
 import io.navalis.api.domain.model.Game;
+import io.navalis.api.infrastructure.persistence.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -26,10 +27,12 @@ public class GameController {
 
     private final GameService gameService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final UserRepository userRepository;
 
-    public GameController(GameService gameService, SimpMessagingTemplate messagingTemplate) {
+    public GameController(GameService gameService, SimpMessagingTemplate messagingTemplate, UserRepository userRepository) {
         this.gameService = gameService;
         this.messagingTemplate = messagingTemplate;
+        this.userRepository = userRepository;
     }
 
     @PostMapping
@@ -45,9 +48,11 @@ public class GameController {
         GameResponse response = gameService.joinGame(gameId, playerId);
 
         // Notify the game room that an opponent has joined
+        String joinerUsername = userRepository.findById(playerId).map(u -> u.getUsername()).orElse("Oponente");
         Map<String, Object> notification = new HashMap<>();
         notification.put("type", "OPPONENT_JOINED");
         notification.put("playerId", playerId.toString());
+        notification.put("username", joinerUsername);
         messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
 
         return ResponseEntity.ok(response);
@@ -59,9 +64,11 @@ public class GameController {
         GameResponse response = gameService.joinByRoomCode(roomCode.toUpperCase(), playerId);
 
         // Notify the game room that an opponent has joined
+        String joinerUsername = userRepository.findById(playerId).map(u -> u.getUsername()).orElse("Oponente");
         Map<String, Object> notification = new HashMap<>();
         notification.put("type", "OPPONENT_JOINED");
         notification.put("playerId", playerId.toString());
+        notification.put("username", joinerUsername);
         messagingTemplate.convertAndSend("/topic/game/" + response.gameId(), (Object) notification);
 
         return ResponseEntity.ok(response);

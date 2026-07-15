@@ -16,7 +16,8 @@ public record ReconnectResponse(
         List<String> sunkEnemyShips,  // enemy ships I've sunk
         List<String> sunkMyShips,     // my ships that are sunk
         boolean opponentReady,
-        boolean myReady
+        boolean myReady,
+        String opponentUsername
 ) {
     public record ShipData(String shipType, int row, int col, String orientation) {}
     public record ShotData(int row, int col, String result) {}
