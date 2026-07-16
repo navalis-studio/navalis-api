@@ -20,15 +20,21 @@ import io.navalis.api.infrastructure.persistence.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class GameService {
@@ -37,16 +43,22 @@ public class GameService {
     private static final String ROOM_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final int ROOM_CODE_LENGTH = 6;
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int TURN_TIMER_SECONDS = 20;
 
     private final GameRepository gameRepository;
     private final JpaGameRepository jpaGameRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     private final Map<UUID, Game> activeGames = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, ScheduledFuture<?>> turnTimers = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
-    public GameService(GameRepository gameRepository, JpaGameRepository jpaGameRepository, UserRepository userRepository) {
+    public GameService(GameRepository gameRepository, JpaGameRepository jpaGameRepository,
+                       UserRepository userRepository, SimpMessagingTemplate messagingTemplate) {
         this.gameRepository = gameRepository;
         this.jpaGameRepository = jpaGameRepository;
         this.userRepository = userRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     /**
@@ -134,14 +146,131 @@ public class GameService {
 
         boolean gameOver = game.getStatus() == GameStatus.FINISHED;
 
-        // Only persist when game ends (save result)
+        // Cancel timer when game ends
         if (gameOver) {
+            cancelTurnTimer(gameId);
             gameRepository.save(game);
             updatePlayerStats(game.getWinnerId(), getLoser(game));
             activeGames.remove(gameId);
         }
 
         return new ShotResponse(result, sunkShipType, sunkShipCells, gameOver, game.getWinnerId());
+    }
+
+    /**
+     * Starts (or restarts) the 20-second turn timer for the given game.
+     * When the timer expires, an auto-fire is performed for the current turn player.
+     */
+    public void startTurnTimer(UUID gameId) {
+        // Cancel any existing timer for this game
+        cancelTurnTimer(gameId);
+
+        Game game = activeGames.get(gameId);
+        if (game == null || game.getStatus() != GameStatus.IN_PROGRESS) {
+            return;
+        }
+
+        UUID currentPlayerId = game.getCurrentTurnPlayerId();
+
+        // Broadcast TURN_TIMER_START event so frontend can show countdown
+        Map<String, Object> timerEvent = new HashMap<>();
+        timerEvent.put("type", "TURN_TIMER_START");
+        timerEvent.put("durationSeconds", TURN_TIMER_SECONDS);
+        timerEvent.put("currentPlayerId", currentPlayerId.toString());
+        messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) timerEvent);
+
+        // Schedule auto-fire after 20 seconds
+        ScheduledFuture<?> future = scheduler.schedule(() -> {
+            handleTimerExpiry(gameId, currentPlayerId);
+        }, TURN_TIMER_SECONDS, TimeUnit.SECONDS);
+
+        turnTimers.put(gameId, future);
+    }
+
+    /**
+     * Cancels and removes the turn timer for the given game.
+     */
+    public void cancelTurnTimer(UUID gameId) {
+        ScheduledFuture<?> future = turnTimers.remove(gameId);
+        if (future != null) {
+            future.cancel(false);
+        }
+    }
+
+    /**
+     * Returns a random Coordinate that hasn't been attacked yet on the opponent's board.
+     */
+    public Coordinate getRandomUnattackedCell(UUID gameId, UUID shooterId) {
+        Game game = activeGames.get(gameId);
+        if (game == null) return null;
+
+        var opponent = game.getPlayer1().getId().equals(shooterId)
+                ? game.getPlayer2()
+                : game.getPlayer1();
+
+        if (opponent == null) return null;
+
+        Map<Coordinate, CellState> shots = opponent.getBoard().getShots();
+        List<Coordinate> unattacked = new ArrayList<>();
+        for (int row = 0; row < 10; row++) {
+            for (int col = 0; col < 10; col++) {
+                Coordinate coord = new Coordinate(row, col);
+                if (!shots.containsKey(coord)) {
+                    unattacked.add(coord);
+                }
+            }
+        }
+
+        if (unattacked.isEmpty()) return null;
+        return unattacked.get(RANDOM.nextInt(unattacked.size()));
+    }
+
+    /**
+     * Handle timer expiry: perform auto-fire for the current player on a random cell.
+     * This runs on the scheduler thread, so synchronization with game state is needed.
+     */
+    private void handleTimerExpiry(UUID gameId, UUID expectedPlayerId) {
+        try {
+            Game game = activeGames.get(gameId);
+            if (game == null) return;
+
+            // Synchronize on the game object to prevent concurrent modification
+            synchronized (game) {
+                // Verify the game is still in progress and it's still the expected player's turn
+                if (game.getStatus() != GameStatus.IN_PROGRESS) return;
+                if (!expectedPlayerId.equals(game.getCurrentTurnPlayerId())) return;
+
+                // Pick a random unattacked cell
+                Coordinate target = getRandomUnattackedCell(gameId, expectedPlayerId);
+                if (target == null) return;
+
+                // Fire
+                FireRequest request = new FireRequest(target.row(), target.col());
+                ShotResponse response = fire(gameId, expectedPlayerId, request);
+
+                // Broadcast SHOT_FIRED event (same format as GameWebSocketController.fire())
+                Map<String, Object> notification = new HashMap<>();
+                notification.put("type", "SHOT_FIRED");
+                notification.put("shooterId", expectedPlayerId.toString());
+                notification.put("row", target.row());
+                notification.put("col", target.col());
+                notification.put("result", response.result().name());
+                notification.put("sunkShipType", response.sunkShipType() != null ? response.sunkShipType().name() : null);
+                notification.put("sunkShipCells", response.sunkShipCells());
+                notification.put("gameOver", response.gameOver());
+                notification.put("winnerId", response.winnerId() != null ? response.winnerId().toString() : null);
+
+                messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
+
+                // If the game is still in progress, start the timer for the next turn
+                // (If HIT/SUNK, same player fires again; if MISS, it switched to opponent)
+                if (!response.gameOver()) {
+                    startTurnTimer(gameId);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error during auto-fire for game {}: {}", gameId, e.getMessage(), e);
+        }
     }
 
     public List<GameResponse> findAvailableGames() {
@@ -171,6 +300,7 @@ public class GameService {
             throw new DomainException("Não é possível cancelar uma partida em andamento.");
         }
 
+        cancelTurnTimer(gameId);
         logger.info("Removendo game {} do activeGames e do banco", gameId);
         activeGames.remove(gameId);
         jpaGameRepository.deleteById(gameId);
@@ -191,6 +321,8 @@ public class GameService {
         Game game = activeGames.get(gameId);
         if (game == null) return null;
         if (game.getStatus() == GameStatus.FINISHED) return null;
+
+        cancelTurnTimer(gameId);
 
         // Only count as WO victory if game was in progress
         if (game.getStatus() == GameStatus.IN_PROGRESS) {

@@ -61,6 +61,11 @@ public class GameWebSocketController {
         }
 
         messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
+
+        // Start the turn timer when the game starts
+        if (gameInfo.status() == GameStatus.IN_PROGRESS) {
+            gameService.startTurnTimer(gameId);
+        }
     }
 
     @MessageMapping("/game/{gameId}/fire")
@@ -82,6 +87,11 @@ public class GameWebSocketController {
         notification.put("winnerId", response.winnerId() != null ? response.winnerId().toString() : null);
 
         messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
+
+        // Reset the turn timer for the next turn (unless game is over)
+        if (!response.gameOver()) {
+            gameService.startTurnTimer(gameId);
+        }
     }
 
     private UUID extractUserId(Principal principal) {
