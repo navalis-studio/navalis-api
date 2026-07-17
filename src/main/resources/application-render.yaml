@@ -8,6 +8,10 @@ spring:
     properties:
       hibernate:
         format_sql: false
+  flyway:
+    url: jdbc:postgresql://${CHAVE_POSTGRES_HOST}:${CHAVE_POSTGRES_PORT}/${CHAVE_POSTGRES_DB}
+    user: ${CHAVE_POSTGRES_USER}
+    password: ${CHAVE_POSTGRES_PASSWORD}
 
 server:
   port: ${PORT:5000}
