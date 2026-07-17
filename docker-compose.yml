@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: navalis-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CHAVE_POSTGRES_DB}
+      POSTGRES_USER: ${CHAVE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CHAVE_POSTGRES_PASSWORD}
+    ports:
+      - "${CHAVE_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CHAVE_POSTGRES_USER} -d ${CHAVE_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: navalis-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${CHAVE_POSTGRES_DB}
+      CHAVE_POSTGRES_USER: ${CHAVE_POSTGRES_USER}
+      CHAVE_POSTGRES_PASSWORD: ${CHAVE_POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "5000:5000"
+
+volumes:
+  postgres_data:
