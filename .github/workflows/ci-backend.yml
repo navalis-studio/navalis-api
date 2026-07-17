@@ -45,6 +45,9 @@ jobs:
           distribution: "temurin"
           cache: "maven"
 
+      - name: Dar permissão ao Maven Wrapper
+        run: chmod +x mvnw
+
       - name: Compilar projeto
         run: ./mvnw compile -B
 
