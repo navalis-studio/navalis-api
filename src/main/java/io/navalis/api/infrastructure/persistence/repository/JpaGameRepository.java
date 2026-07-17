@@ -22,11 +22,6 @@ public class JpaGameRepository implements GameRepository {
     }
 
     @Override
-    public Optional<Game> findById(UUID id) {
-        return Optional.empty();
-    }
-
-    @Override
     public void save(Game game) {
         Optional<GameEntity> existing = springDataRepo.findById(game.getId());
         if (existing.isPresent()) {
@@ -37,10 +32,6 @@ public class JpaGameRepository implements GameRepository {
             GameEntity entity = gameMapper.toEntity(game);
             springDataRepo.save(entity);
         }
-    }
-
-    public List<GameEntity> findByStatus(String status) {
-        return springDataRepo.findByStatus(status);
     }
 
     public List<Object[]> findByStatusWithHostUsername(String status) {

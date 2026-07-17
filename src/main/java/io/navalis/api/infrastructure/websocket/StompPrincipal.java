@@ -21,8 +21,4 @@ public class StompPrincipal implements Principal {
     public UUID getUserId() {
         return userId;
     }
-
-    public String getUsername() {
-        return username;
-    }
 }

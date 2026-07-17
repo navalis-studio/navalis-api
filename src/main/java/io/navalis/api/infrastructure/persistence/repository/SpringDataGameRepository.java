@@ -12,7 +12,6 @@ import java.util.UUID;
 
 @Repository
 public interface SpringDataGameRepository extends JpaRepository<GameEntity, UUID> {
-    List<GameEntity> findByStatus(String status);
 
     @Query(value = "SELECT g.id, g.room_code, g.status, u.username FROM games g JOIN users u ON g.player1_id = u.id WHERE g.status = :status", nativeQuery = true)
     List<Object[]> findByStatusWithHostUsername(String status);

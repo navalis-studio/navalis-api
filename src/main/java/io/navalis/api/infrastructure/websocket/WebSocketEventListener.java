@@ -141,18 +141,4 @@ public class WebSocketEventListener {
             logger.error("Erro ao executar forfeit após timeout: {}", e.getMessage());
         }
     }
-
-    /**
-     * Check if a player is in a temporarily disconnected state (has pending timer).
-     */
-    public boolean isPlayerDisconnected(UUID playerId) {
-        return pendingDisconnects.containsKey(playerId);
-    }
-
-    /**
-     * Get the gameId of a temporarily disconnected player.
-     */
-    public UUID getDisconnectedPlayerGame(UUID playerId) {
-        return disconnectedPlayers.get(playerId);
-    }
 }

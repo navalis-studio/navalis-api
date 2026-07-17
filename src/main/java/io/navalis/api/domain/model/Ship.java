@@ -49,8 +49,4 @@ public class Ship {
     public Orientation getOrientation() {
         return orientation;
     }
-
-    public Set<Coordinate> getHits() {
-        return hits;
-    }
 }
