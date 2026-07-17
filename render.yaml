@@ -1,0 +1,44 @@
+databases:
+  - name: navalis-db
+    plan: free
+    databaseName: navalis_db
+    user: navalis_user
+    region: oregon
+
+services:
+  - type: web
+    name: navalis-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: CHAVE_POSTGRES_DB
+        fromDatabase:
+          name: navalis-db
+          property: database
+      - key: CHAVE_POSTGRES_USER
+        fromDatabase:
+          name: navalis-db
+          property: user
+      - key: CHAVE_POSTGRES_PASSWORD
+        fromDatabase:
+          name: navalis-db
+          property: password
+      - key: CHAVE_POSTGRES_HOST
+        fromDatabase:
+          name: navalis-db
+          property: host
+      - key: CHAVE_POSTGRES_PORT
+        fromDatabase:
+          name: navalis-db
+          property: port
+      - key: DATABASE_URL
+        fromDatabase:
+          name: navalis-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+    healthCheckPath: /v3/api-docs
