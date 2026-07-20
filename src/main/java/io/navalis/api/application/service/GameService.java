@@ -119,6 +119,11 @@ public class GameService {
         // No DB save - status transition handled in memory
     }
 
+    public void unmarkReady(UUID gameId, UUID playerId) {
+        Game game = getActiveGame(gameId);
+        game.unmarkReady(playerId);
+    }
+
     public ShotResponse fire(UUID gameId, UUID playerId, FireRequest request) {
         Game game = getActiveGame(gameId);
         Coordinate target = new Coordinate(request.row(), request.col());

@@ -17,6 +17,10 @@ public class Player {
         this.ready = true;
     }
 
+    public void unmarkReady() {
+        this.ready = false;
+    }
+
     public UUID getId() {
         return id;
     }

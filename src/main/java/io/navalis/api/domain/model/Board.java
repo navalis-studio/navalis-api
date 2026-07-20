@@ -59,6 +59,11 @@ public class Board {
         return false;
     }
 
+    public void clear() {
+        ships.clear();
+        shots.clear();
+    }
+
     public List<Ship> getShips() {
         return ships;
     }

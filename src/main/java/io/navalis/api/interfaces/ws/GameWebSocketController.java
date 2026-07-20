@@ -68,6 +68,18 @@ public class GameWebSocketController {
         }
     }
 
+    @MessageMapping("/game/{gameId}/unready")
+    public void unmarkReady(@DestinationVariable UUID gameId, Principal principal) {
+        UUID playerId = extractUserId(principal);
+        gameService.unmarkReady(gameId, playerId);
+
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("type", "PLAYER_UNREADY");
+        notification.put("playerId", playerId.toString());
+
+        messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
+    }
+
     @MessageMapping("/game/{gameId}/fire")
     public void fire(@DestinationVariable UUID gameId,
                      @Payload FireRequest request,

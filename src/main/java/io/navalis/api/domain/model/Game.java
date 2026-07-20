@@ -60,6 +60,16 @@ public class Game {
         }
     }
 
+    public void unmarkReady(UUID playerId) {
+        if (status != GameStatus.PLACING_SHIPS) {
+            throw new GameNotReadyException("Não é possível cancelar prontidão neste momento.");
+        }
+
+        Player player = getPlayerById(playerId);
+        player.unmarkReady();
+        player.getBoard().clear();
+    }
+
     public ShotResult fire(UUID playerId, Coordinate target) {
         if (status != GameStatus.IN_PROGRESS) {
             throw new GameNotReadyException("Partida não está em andamento.");
