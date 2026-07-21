@@ -151,15 +151,32 @@ public class GameService {
 
         boolean gameOver = game.getStatus() == GameStatus.FINISHED;
 
-        // Cancel timer when game ends
+        // On game over, reveal all ship positions for both players
+        Map<String, List<int[]>> revealedShips = null;
         if (gameOver) {
+            revealedShips = new HashMap<>();
+            // Reveal ships of player1's board (for player2 to see)
+            for (Ship ship : game.getPlayer1().getBoard().getShips()) {
+                revealedShips.computeIfAbsent(game.getPlayer1().getId().toString(), k -> new ArrayList<>())
+                        .addAll(ship.getOccupiedCoordinates().stream()
+                                .map(c -> new int[]{c.row(), c.col()})
+                                .toList());
+            }
+            // Reveal ships of player2's board (for player1 to see)
+            for (Ship ship : game.getPlayer2().getBoard().getShips()) {
+                revealedShips.computeIfAbsent(game.getPlayer2().getId().toString(), k -> new ArrayList<>())
+                        .addAll(ship.getOccupiedCoordinates().stream()
+                                .map(c -> new int[]{c.row(), c.col()})
+                                .toList());
+            }
+
             cancelTurnTimer(gameId);
             gameRepository.save(game);
             updatePlayerStats(game.getWinnerId(), getLoser(game));
             activeGames.remove(gameId);
         }
 
-        return new ShotResponse(result, sunkShipType, sunkShipCells, gameOver, game.getWinnerId());
+        return new ShotResponse(result, sunkShipType, sunkShipCells, gameOver, game.getWinnerId(), revealedShips);
     }
 
     /**
@@ -264,6 +281,9 @@ public class GameService {
                 notification.put("sunkShipCells", response.sunkShipCells());
                 notification.put("gameOver", response.gameOver());
                 notification.put("winnerId", response.winnerId() != null ? response.winnerId().toString() : null);
+                if (response.revealedShips() != null) {
+                    notification.put("revealedShips", response.revealedShips());
+                }
 
                 messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
 

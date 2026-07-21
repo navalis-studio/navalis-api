@@ -97,6 +97,9 @@ public class GameWebSocketController {
         notification.put("sunkShipCells", response.sunkShipCells());
         notification.put("gameOver", response.gameOver());
         notification.put("winnerId", response.winnerId() != null ? response.winnerId().toString() : null);
+        if (response.revealedShips() != null) {
+            notification.put("revealedShips", response.revealedShips());
+        }
 
         messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
 
