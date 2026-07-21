@@ -33,6 +33,8 @@ public class WebSocketEventListener {
     private final ConcurrentHashMap<UUID, ScheduledFuture<?>> pendingDisconnects = new ConcurrentHashMap<>();
     // Tracks which game a disconnected player was in: playerId -> gameId
     private final ConcurrentHashMap<UUID, UUID> disconnectedPlayers = new ConcurrentHashMap<>();
+    // Tracks active session count per player: playerId -> count of active sessions
+    private final ConcurrentHashMap<UUID, Integer> activeSessionCount = new ConcurrentHashMap<>();
 
     public WebSocketEventListener(GameService gameService, SimpMessagingTemplate messagingTemplate) {
         this.gameService = gameService;
@@ -48,6 +50,9 @@ public class WebSocketEventListener {
 
         try {
             UUID playerId = UUID.fromString(userIdStr);
+
+            // Increment active session count
+            activeSessionCount.merge(playerId, 1, Integer::sum);
 
             // Check if this player has a pending disconnect timer
             ScheduledFuture<?> pendingTimer = pendingDisconnects.remove(playerId);
@@ -80,6 +85,19 @@ public class WebSocketEventListener {
 
         try {
             UUID playerId = UUID.fromString(userIdStr);
+
+            // Decrement active session count
+            int remaining = activeSessionCount.merge(playerId, -1, Integer::sum);
+            if (remaining <= 0) {
+                activeSessionCount.remove(playerId);
+            }
+
+            // Only start disconnect timer if player has NO remaining active sessions
+            if (remaining > 0) {
+                logger.info("Jogador {} ainda tem {} sessão(ões) ativa(s), ignorando desconexão", playerId, remaining);
+                return;
+            }
+
             UUID gameId = gameService.findGameByPlayer(playerId);
 
             if (gameId == null) return;
