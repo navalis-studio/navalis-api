@@ -67,7 +67,6 @@ public class Game {
 
         Player player = getPlayerById(playerId);
         player.unmarkReady();
-        player.getBoard().clear();
     }
 
     public ShotResult fire(UUID playerId, Coordinate target) {
