@@ -68,7 +68,7 @@ class GameServiceTest {
         @Test
         void shouldGenerateUniqueRoomCodesForDifferentGames() {
             GameResponse response1 = gameService.createGame(PLAYER1_ID);
-            GameResponse response2 = gameService.createGame(PLAYER1_ID);
+            GameResponse response2 = gameService.createGame(PLAYER2_ID);
 
             // Room codes are random, extremely unlikely to collide
             assertNotNull(response1.roomCode());

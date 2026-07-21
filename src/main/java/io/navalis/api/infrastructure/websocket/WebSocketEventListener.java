@@ -129,7 +129,8 @@ public class WebSocketEventListener {
 
                 logger.info("WO: jogador {} abandonou partida {}. Vencedor: {}", playerId, gameId, game.getWinnerId());
             } else {
-                // Game was cancelled (WAITING or PLACING_SHIPS)
+                // Game was cancelled (WAITING or PLACING_SHIPS) or already finished/removed
+                // Only send notification if game still existed
                 Map<String, Object> notification = new HashMap<>();
                 notification.put("type", "GAME_CANCELLED");
                 notification.put("quitterId", playerId.toString());

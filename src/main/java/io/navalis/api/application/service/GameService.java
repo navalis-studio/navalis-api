@@ -76,6 +76,12 @@ public class GameService {
     }
 
     public GameResponse createGame(UUID playerId) {
+        // Prevent player from being in multiple active games
+        UUID existingGame = findGameByPlayer(playerId);
+        if (existingGame != null) {
+            throw new DomainException("Você já está em uma partida ativa.");
+        }
+
         UUID gameId = UUID.randomUUID();
         String roomCode = generateRoomCode();
         Game game = Game.create(gameId, roomCode, playerId);
@@ -86,6 +92,12 @@ public class GameService {
     }
 
     public GameResponse joinGame(UUID gameId, UUID playerId) {
+        // Prevent player from being in multiple active games
+        UUID existingGame = findGameByPlayer(playerId);
+        if (existingGame != null && !existingGame.equals(gameId)) {
+            throw new DomainException("Você já está em uma partida ativa.");
+        }
+
         Game game = getActiveGame(gameId);
         game.join(playerId);
         gameRepository.save(game); // Persist player2 joining
@@ -96,6 +108,12 @@ public class GameService {
     }
 
     public GameResponse joinByRoomCode(String roomCode, UUID playerId) {
+        // Prevent player from being in multiple active games
+        UUID existingGame = findGameByPlayer(playerId);
+        if (existingGame != null) {
+            throw new DomainException("Você já está em uma partida ativa.");
+        }
+
         Game game = findActiveGameByRoomCode(roomCode);
         UUID gameId = game.getId();
         game.join(playerId);
