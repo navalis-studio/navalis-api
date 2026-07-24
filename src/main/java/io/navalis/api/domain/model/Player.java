@@ -19,6 +19,7 @@ public class Player {
 
     public void unmarkReady() {
         this.ready = false;
+        this.board.clear();
     }
 
     public UUID getId() {

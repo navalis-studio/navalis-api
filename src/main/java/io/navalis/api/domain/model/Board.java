@@ -14,6 +14,13 @@ public class Board {
     private final Map<Coordinate, CellState> shots = new HashMap<>();
 
     public void placeShip(Ship ship) {
+        // Prevent duplicate ship types
+        boolean alreadyPlaced = ships.stream()
+                .anyMatch(s -> s.getType() == ship.getType());
+        if (alreadyPlaced) {
+            throw new InvalidPlacementException("error.ship_already_placed");
+        }
+
         List<Coordinate> newCoordinates = ship.getOccupiedCoordinates();
 
         for (Coordinate coordinate : newCoordinates) {
