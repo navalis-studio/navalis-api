@@ -79,7 +79,7 @@ public class GameService {
         // Prevent player from being in multiple active games
         UUID existingGame = findGameByPlayer(playerId);
         if (existingGame != null) {
-            throw new DomainException("Você já está em uma partida ativa.");
+            throw new DomainException("error.already_in_game");
         }
 
         UUID gameId = UUID.randomUUID();
@@ -95,7 +95,7 @@ public class GameService {
         // Prevent player from being in multiple active games
         UUID existingGame = findGameByPlayer(playerId);
         if (existingGame != null && !existingGame.equals(gameId)) {
-            throw new DomainException("Você já está em uma partida ativa.");
+            throw new DomainException("error.already_in_game");
         }
 
         Game game = getActiveGame(gameId);
@@ -111,7 +111,7 @@ public class GameService {
         // Prevent player from being in multiple active games
         UUID existingGame = findGameByPlayer(playerId);
         if (existingGame != null) {
-            throw new DomainException("Você já está em uma partida ativa.");
+            throw new DomainException("error.already_in_game");
         }
 
         Game game = findActiveGameByRoomCode(roomCode);
@@ -340,7 +340,7 @@ public class GameService {
 
         // Only allow cancel before game is in progress
         if (game.getStatus() == GameStatus.IN_PROGRESS || game.getStatus() == GameStatus.FINISHED) {
-            throw new DomainException("Não é possível cancelar uma partida em andamento.");
+            throw new DomainException("error.cannot_cancel_in_progress");
         }
 
         cancelTurnTimer(gameId);
@@ -491,7 +491,7 @@ public class GameService {
     private Game getActiveGame(UUID gameId) {
         Game game = activeGames.get(gameId);
         if (game == null) {
-            throw new DomainException("Partida não encontrada: " + gameId);
+            throw new DomainException("error.game_not_found");
         }
         return game;
     }

@@ -26,7 +26,7 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
-            throw new IllegalArgumentException("Nome de usuário já está em uso.");
+            throw new IllegalArgumentException("error.username_taken");
         }
 
         UserEntity user = new UserEntity();
@@ -41,10 +41,10 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         UserEntity user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new IllegalArgumentException("Credenciais inválidas."));
+                .orElseThrow(() -> new IllegalArgumentException("error.invalid_credentials"));
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("Credenciais inválidas.");
+            throw new IllegalArgumentException("error.invalid_credentials");
         }
 
         String token = jwtTokenProvider.generateToken(user.getId(), user.getUsername());

@@ -38,7 +38,7 @@ public class Game {
 
     public void placeShip(UUID playerId, ShipType shipType, Coordinate start, Orientation orientation) {
         if (status != GameStatus.PLACING_SHIPS) {
-            throw new GameNotReadyException("Não é possível posicionar navios neste momento.");
+            throw new GameNotReadyException("error.cannot_place_ships");
         }
 
         Player player = getPlayerById(playerId);
@@ -48,7 +48,7 @@ public class Game {
 
     public void markReady(UUID playerId) {
         if (status != GameStatus.PLACING_SHIPS) {
-            throw new GameNotReadyException("Não é possível marcar pronto neste momento.");
+            throw new GameNotReadyException("error.cannot_ready");
         }
 
         Player player = getPlayerById(playerId);
@@ -62,7 +62,7 @@ public class Game {
 
     public void unmarkReady(UUID playerId) {
         if (status != GameStatus.PLACING_SHIPS) {
-            throw new GameNotReadyException("Não é possível cancelar prontidão neste momento.");
+            throw new GameNotReadyException("error.cannot_unready");
         }
 
         Player player = getPlayerById(playerId);
@@ -71,7 +71,7 @@ public class Game {
 
     public ShotResult fire(UUID playerId, Coordinate target) {
         if (status != GameStatus.IN_PROGRESS) {
-            throw new GameNotReadyException("Partida não está em andamento.");
+            throw new GameNotReadyException("error.game_not_in_progress");
         }
         if (!playerId.equals(currentTurnPlayerId)) {
             throw new NotYourTurnException();
@@ -107,7 +107,7 @@ public class Game {
         if (player2 != null && player2.getId().equals(playerId)) {
             return player2;
         }
-        throw new IllegalArgumentException("Jogador não encontrado nesta partida.");
+        throw new IllegalArgumentException("error.player_not_found");
     }
 
     private Player getOpponent(UUID playerId) {

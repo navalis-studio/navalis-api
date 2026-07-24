@@ -95,7 +95,7 @@ class AuthServiceTest {
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                     () -> authService.register(request));
 
-            assertEquals("Nome de usuário já está em uso.", ex.getMessage());
+            assertEquals("error.username_taken", ex.getMessage());
             verify(userRepository, never()).save(any());
         }
     }
@@ -139,7 +139,7 @@ class AuthServiceTest {
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                     () -> authService.login(request));
 
-            assertEquals("Credenciais inválidas.", ex.getMessage());
+            assertEquals("error.invalid_credentials", ex.getMessage());
         }
 
         @Test
@@ -151,7 +151,7 @@ class AuthServiceTest {
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                     () -> authService.login(request));
 
-            assertEquals("Credenciais inválidas.", ex.getMessage());
+            assertEquals("error.invalid_credentials", ex.getMessage());
         }
 
         @Test

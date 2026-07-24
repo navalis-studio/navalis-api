@@ -18,7 +18,7 @@ public class Board {
 
         for (Coordinate coordinate : newCoordinates) {
             if (isOccupied(coordinate)) {
-                throw new InvalidPlacementException("Posição já ocupada por outro navio: " + coordinate);
+                throw new InvalidPlacementException("error.position_occupied");
             }
         }
 
@@ -27,7 +27,7 @@ public class Board {
 
     public ShotResult receiveShot(Coordinate target) {
         if (shots.containsKey(target)) {
-            throw new InvalidShotException("Já atiraram nesta posição: " + target);
+            throw new InvalidShotException("error.already_shot");
         }
 
         for (Ship ship : ships) {
