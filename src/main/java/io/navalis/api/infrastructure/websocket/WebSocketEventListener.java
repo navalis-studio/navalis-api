@@ -2,6 +2,7 @@ package io.navalis.api.infrastructure.websocket;
 
 import io.navalis.api.application.service.GameService;
 import io.navalis.api.domain.model.Game;
+import io.navalis.api.infrastructure.config.MetricsConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -27,6 +28,7 @@ public class WebSocketEventListener {
 
     private final GameService gameService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MetricsConfig metrics;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
     // Tracks pending disconnect timers: playerId -> scheduledFuture
@@ -36,9 +38,11 @@ public class WebSocketEventListener {
     // Tracks active session count per player: playerId -> count of active sessions
     private final ConcurrentHashMap<UUID, Integer> activeSessionCount = new ConcurrentHashMap<>();
 
-    public WebSocketEventListener(GameService gameService, SimpMessagingTemplate messagingTemplate) {
+    public WebSocketEventListener(GameService gameService, SimpMessagingTemplate messagingTemplate,
+                                  MetricsConfig metrics) {
         this.gameService = gameService;
         this.messagingTemplate = messagingTemplate;
+        this.metrics = metrics;
     }
 
     @EventListener
@@ -53,6 +57,8 @@ public class WebSocketEventListener {
 
             // Increment active session count
             activeSessionCount.merge(playerId, 1, Integer::sum);
+            metrics.playerConnected(playerId);
+            metrics.playerActivity(playerId);
 
             // Check if this player has a pending disconnect timer
             ScheduledFuture<?> pendingTimer = pendingDisconnects.remove(playerId);
@@ -91,6 +97,7 @@ public class WebSocketEventListener {
             if (remaining <= 0) {
                 activeSessionCount.remove(playerId);
             }
+            metrics.playerDisconnected(playerId);
 
             // Only start disconnect timer if player has NO remaining active sessions
             if (remaining > 0) {

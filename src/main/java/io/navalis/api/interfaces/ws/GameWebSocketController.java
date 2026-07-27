@@ -6,6 +6,7 @@ import io.navalis.api.application.dto.response.GameResponse;
 import io.navalis.api.application.dto.response.ShotResponse;
 import io.navalis.api.application.service.GameService;
 import io.navalis.api.domain.model.GameStatus;
+import io.navalis.api.infrastructure.config.MetricsConfig;
 import io.navalis.api.infrastructure.websocket.StompPrincipal;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -23,10 +24,13 @@ public class GameWebSocketController {
 
     private final GameService gameService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MetricsConfig metrics;
 
-    public GameWebSocketController(GameService gameService, SimpMessagingTemplate messagingTemplate) {
+    public GameWebSocketController(GameService gameService, SimpMessagingTemplate messagingTemplate,
+                                   MetricsConfig metrics) {
         this.gameService = gameService;
         this.messagingTemplate = messagingTemplate;
+        this.metrics = metrics;
     }
 
     @MessageMapping("/game/{gameId}/place-ship")
@@ -34,6 +38,7 @@ public class GameWebSocketController {
                           @Payload PlaceShipRequest request,
                           Principal principal) {
         UUID playerId = extractUserId(principal);
+        metrics.playerActivity(playerId);
         gameService.placeShip(gameId, playerId, request);
 
         Map<String, Object> notification = new HashMap<>();
@@ -46,6 +51,7 @@ public class GameWebSocketController {
     @MessageMapping("/game/{gameId}/ready")
     public void markReady(@DestinationVariable UUID gameId, Principal principal) {
         UUID playerId = extractUserId(principal);
+        metrics.playerActivity(playerId);
         gameService.markReady(gameId, playerId);
 
         GameResponse gameInfo = gameService.getGameInfo(gameId);
@@ -85,6 +91,7 @@ public class GameWebSocketController {
                      @Payload FireRequest request,
                      Principal principal) {
         UUID playerId = extractUserId(principal);
+        metrics.playerActivity(playerId);
         ShotResponse response = gameService.fire(gameId, playerId, request);
 
         Map<String, Object> notification = new HashMap<>();

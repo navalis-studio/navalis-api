@@ -15,6 +15,7 @@ import io.navalis.api.domain.model.Ship;
 import io.navalis.api.domain.model.ShipType;
 import io.navalis.api.domain.model.ShotResult;
 import io.navalis.api.domain.port.GameRepository;
+import io.navalis.api.infrastructure.config.MetricsConfig;
 import io.navalis.api.infrastructure.persistence.repository.JpaGameRepository;
 import io.navalis.api.infrastructure.persistence.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
@@ -49,16 +50,19 @@ public class GameService {
     private final JpaGameRepository jpaGameRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MetricsConfig metrics;
     private final Map<UUID, Game> activeGames = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, ScheduledFuture<?>> turnTimers = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
     public GameService(GameRepository gameRepository, JpaGameRepository jpaGameRepository,
-                       UserRepository userRepository, SimpMessagingTemplate messagingTemplate) {
+                       UserRepository userRepository, SimpMessagingTemplate messagingTemplate,
+                       MetricsConfig metrics) {
         this.gameRepository = gameRepository;
         this.jpaGameRepository = jpaGameRepository;
         this.userRepository = userRepository;
         this.messagingTemplate = messagingTemplate;
+        this.metrics = metrics;
     }
 
     /**
@@ -87,6 +91,7 @@ public class GameService {
         Game game = Game.create(gameId, roomCode, playerId);
         activeGames.put(gameId, game);
         gameRepository.save(game); // Persist for listing available games
+        metrics.gameCreated();
 
         return new GameResponse(gameId, roomCode, game.getStatus(), "Partida criada. Aguardando oponente.", null);
     }
@@ -146,6 +151,7 @@ public class GameService {
         Game game = getActiveGame(gameId);
         Coordinate target = new Coordinate(request.row(), request.col());
         ShotResult result = game.fire(playerId, target);
+        metrics.shotFired(result == ShotResult.HIT || result == ShotResult.SUNK);
 
         ShipType sunkShipType = null;
         List<int[]> sunkShipCells = null;
@@ -192,6 +198,7 @@ public class GameService {
             gameRepository.save(game);
             updatePlayerStats(game.getWinnerId(), getLoser(game));
             activeGames.remove(gameId);
+            metrics.gameFinished();
         }
 
         return new ShotResponse(result, sunkShipType, sunkShipCells, gameOver, game.getWinnerId(), revealedShips);
@@ -347,6 +354,7 @@ public class GameService {
         logger.info("Removendo game {} do activeGames e do banco", gameId);
         activeGames.remove(gameId);
         jpaGameRepository.deleteById(gameId);
+        metrics.gameRemoved();
     }
 
     public GameResponse getGameInfo(UUID gameId) {
@@ -373,12 +381,14 @@ public class GameService {
             gameRepository.save(game);
             updatePlayerStats(game.getWinnerId(), quitterId);
             activeGames.remove(gameId);
+            metrics.gameFinished();
             return game;
         }
 
         // WAITING_FOR_OPPONENT or PLACING_SHIPS: just cancel, no winner
         activeGames.remove(gameId);
         jpaGameRepository.deleteById(gameId);
+        metrics.gameRemoved();
         return null;
     }
 

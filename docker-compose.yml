@@ -31,8 +31,47 @@ services:
       CHAVE_POSTGRES_USER: ${CHAVE_POSTGRES_USER}
       CHAVE_POSTGRES_PASSWORD: ${CHAVE_POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
     ports:
       - "5000:5000"
 
+  # === OBSERVABILIDADE ===
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: navalis-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: navalis-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  zipkin:
+    image: openzipkin/zipkin:3.4
+    container_name: navalis-zipkin
+    restart: unless-stopped
+    ports:
+      - "9411:9411"
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:

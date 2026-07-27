@@ -17,6 +17,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 100
   flyway:
     enabled: true
   web:
@@ -34,3 +35,32 @@ springdoc:
 
 jwt:
   secret: ${JWT_SECRET:navalis-default-secret-key-that-should-be-changed-in-production}
+
+# Observabilidade
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: navalis-api
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99
+  tracing:
+    sampling:
+      probability: 1.0
+    export:
+      zipkin:
+        endpoint: http://localhost:9411/api/v2/spans
+
+# Log com trace/span IDs
+logging:
+  pattern:
+    correlation: "[${spring.application.name:},%mdc{traceId:-},%mdc{spanId:-}] "

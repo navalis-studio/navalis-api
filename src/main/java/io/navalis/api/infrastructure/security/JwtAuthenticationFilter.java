@@ -1,5 +1,6 @@
 package io.navalis.api.infrastructure.security;
 
+import io.navalis.api.infrastructure.config.MetricsConfig;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,9 +18,11 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final MetricsConfig metrics;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, MetricsConfig metrics) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.metrics = metrics;
     }
 
     @Override
@@ -36,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(userId.toString(), null, List.of());
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            metrics.playerActivity(userId);
         }
 
         filterChain.doFilter(request, response);

@@ -9,6 +9,7 @@ import io.navalis.api.domain.exception.GameAlreadyFullException;
 import io.navalis.api.domain.exception.NotYourTurnException;
 import io.navalis.api.domain.model.*;
 import io.navalis.api.domain.port.GameRepository;
+import io.navalis.api.infrastructure.config.MetricsConfig;
 import io.navalis.api.infrastructure.persistence.entity.UserEntity;
 import io.navalis.api.infrastructure.persistence.repository.JpaGameRepository;
 import io.navalis.api.infrastructure.persistence.repository.UserRepository;
@@ -41,6 +42,9 @@ class GameServiceTest {
     @Mock
     private SimpMessagingTemplate messagingTemplate;
 
+    @Mock
+    private MetricsConfig metrics;
+
     private GameService gameService;
 
     private static final UUID PLAYER1_ID = UUID.randomUUID();
@@ -48,7 +52,7 @@ class GameServiceTest {
 
     @BeforeEach
     void setUp() {
-        gameService = new GameService(gameRepository, jpaGameRepository, userRepository, messagingTemplate);
+        gameService = new GameService(gameRepository, jpaGameRepository, userRepository, messagingTemplate, metrics);
     }
 
     @Nested
