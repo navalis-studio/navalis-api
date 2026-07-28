@@ -30,14 +30,14 @@
       }
     },
     {
-      "title": "Partidas Ativas",
+      "title": "Active Games",
       "type": "stat",
       "gridPos": { "h": 6, "w": 4, "x": 4, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "navalis_games_active",
-          "legendFormat": "Ativas"
+          "legendFormat": "Active"
         }
       ],
       "fieldConfig": {
@@ -54,14 +54,14 @@
       }
     },
     {
-      "title": "Players Conectados (WebSocket)",
+      "title": "Connected Players (WebSocket)",
       "type": "stat",
       "gridPos": { "h": 6, "w": 4, "x": 8, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "navalis_players_connected",
-          "legendFormat": "Conectados"
+          "legendFormat": "Connected"
         }
       ],
       "fieldConfig": {
@@ -78,14 +78,14 @@
       }
     },
     {
-      "title": "Partidas Criadas (total)",
+      "title": "Games Created (total)",
       "type": "stat",
       "gridPos": { "h": 6, "w": 4, "x": 12, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "navalis_games_total",
-          "legendFormat": "Criadas"
+          "legendFormat": "Created"
         }
       ],
       "fieldConfig": {
@@ -95,14 +95,14 @@
       }
     },
     {
-      "title": "Partidas Finalizadas (total)",
+      "title": "Games Finished (total)",
       "type": "stat",
       "gridPos": { "h": 6, "w": 4, "x": 16, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "navalis_games_finished_total",
-          "legendFormat": "Finalizadas"
+          "legendFormat": "Finished"
         }
       ],
       "fieldConfig": {
@@ -112,22 +112,22 @@
       }
     },
     {
-      "title": "Tiros por Segundo",
+      "title": "Shots per Second",
       "type": "timeseries",
       "gridPos": { "h": 6, "w": 4, "x": 20, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "expr": "rate(navalis_shots_fired_total[1m])",
-          "legendFormat": "Tiros/s"
+          "legendFormat": "Fired/s"
         },
         {
           "expr": "rate(navalis_shots_hit_total[1m])",
-          "legendFormat": "Acertos/s"
+          "legendFormat": "Hits/s"
         },
         {
           "expr": "rate(navalis_shots_miss_total[1m])",
-          "legendFormat": "Erros/s"
+          "legendFormat": "Misses/s"
         }
       ],
       "fieldConfig": {
@@ -137,7 +137,7 @@
       }
     },
     {
-      "title": "Latência HTTP (p50 / p95 / p99)",
+      "title": "HTTP Latency (p50 / p95 / p99)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -167,7 +167,7 @@
       }
     },
     {
-      "title": "Requests por Endpoint (/s)",
+      "title": "Requests per Endpoint (/s)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -255,5 +255,5 @@
   "time": { "from": "now-30m", "to": "now" },
   "title": "Navalis - Game Monitoring",
   "uid": "navalis-monitoring",
-  "version": 1
+  "version": 2
 }
