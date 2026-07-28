@@ -105,6 +105,12 @@ public class MetricsConfig {
         playerLastActivity.put(playerId, Instant.now());
     }
 
+    public void playerLoggedOut(UUID playerId) {
+        playerLastActivity.remove(playerId);
+        playersWithWebSocket.remove(playerId);
+        updateOnlinePlayers();
+    }
+
     @Scheduled(fixedRate = 10000)
     public void updateOnlinePlayers() {
         // Remove inactive HTTP players
