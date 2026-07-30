@@ -1,5 +1,6 @@
 package io.navalis.api.infrastructure.persistence.repository;
 
+import io.micrometer.observation.annotation.Observed;
 import io.navalis.api.domain.model.Game;
 import io.navalis.api.domain.port.GameRepository;
 import io.navalis.api.infrastructure.persistence.entity.GameEntity;
@@ -11,6 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+@Observed(name = "repository.game")
 public class JpaGameRepository implements GameRepository {
 
     private final SpringDataGameRepository springDataRepo;

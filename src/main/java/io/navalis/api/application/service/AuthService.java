@@ -1,23 +1,25 @@
 package io.navalis.api.application.service;
 
+import io.micrometer.observation.annotation.Observed;
 import io.navalis.api.application.dto.request.LoginRequest;
 import io.navalis.api.application.dto.request.RegisterRequest;
 import io.navalis.api.application.dto.response.AuthResponse;
 import io.navalis.api.infrastructure.persistence.entity.UserEntity;
 import io.navalis.api.infrastructure.persistence.repository.UserRepository;
 import io.navalis.api.infrastructure.security.JwtTokenProvider;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import io.navalis.api.infrastructure.security.ObservedPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@Observed(name = "auth.service")
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final ObservedPasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
     public AuthService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
+                       ObservedPasswordEncoder passwordEncoder,
                        JwtTokenProvider jwtTokenProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;

@@ -1,5 +1,6 @@
 package io.navalis.api.infrastructure.security;
 
+import io.micrometer.observation.annotation.Observed;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -12,13 +13,16 @@ import java.util.Date;
 import java.util.UUID;
 
 @Component
+@Observed(name = "jwt")
 public class JwtTokenProvider {
 
     private final SecretKey key;
-    private final long expirationMs = 86400000; // 24 horas
+    private final long expirationMs;
 
-    public JwtTokenProvider(@Value("${jwt.secret}") String secret) {
+    public JwtTokenProvider(@Value("${jwt.secret}") String secret,
+                            @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expirationMs = expirationMs;
     }
 
     public String generateToken(UUID userId, String username) {

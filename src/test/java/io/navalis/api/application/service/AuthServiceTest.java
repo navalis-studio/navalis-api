@@ -6,6 +6,7 @@ import io.navalis.api.application.dto.response.AuthResponse;
 import io.navalis.api.infrastructure.persistence.entity.UserEntity;
 import io.navalis.api.infrastructure.persistence.repository.UserRepository;
 import io.navalis.api.infrastructure.security.JwtTokenProvider;
+import io.navalis.api.infrastructure.security.ObservedPasswordEncoder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -30,7 +30,7 @@ class AuthServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private PasswordEncoder passwordEncoder;
+    private ObservedPasswordEncoder passwordEncoder;
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;

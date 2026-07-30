@@ -1,5 +1,6 @@
 package io.navalis.api.application.service;
 
+import io.micrometer.observation.annotation.Observed;
 import io.navalis.api.application.dto.request.FireRequest;
 import io.navalis.api.application.dto.request.PlaceShipRequest;
 import io.navalis.api.application.dto.response.GameResponse;
@@ -16,9 +17,11 @@ import io.navalis.api.domain.model.ShipType;
 import io.navalis.api.domain.model.ShotResult;
 import io.navalis.api.domain.port.GameRepository;
 import io.navalis.api.infrastructure.config.MetricsConfig;
+import io.navalis.api.infrastructure.persistence.entity.UserEntity;
 import io.navalis.api.infrastructure.persistence.repository.JpaGameRepository;
 import io.navalis.api.infrastructure.persistence.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -38,6 +41,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@Observed(name = "game.service")
 public class GameService {
 
     private static final Logger logger = LoggerFactory.getLogger(GameService.class);
@@ -79,8 +83,12 @@ public class GameService {
         jpaGameRepository.deleteByStatusIn(nonFinalStatuses);
     }
 
+    @PreDestroy
+    void shutdown() {
+        scheduler.shutdown();
+    }
+
     public GameResponse createGame(UUID playerId) {
-        // Prevent player from being in multiple active games
         UUID existingGame = findGameByPlayer(playerId);
         if (existingGame != null) {
             throw new DomainException("error.already_in_game");
@@ -90,14 +98,13 @@ public class GameService {
         String roomCode = generateRoomCode();
         Game game = Game.create(gameId, roomCode, playerId);
         activeGames.put(gameId, game);
-        gameRepository.save(game); // Persist for listing available games
+        gameRepository.save(game);
         metrics.gameCreated();
 
         return new GameResponse(gameId, roomCode, game.getStatus(), "Partida criada. Aguardando oponente.", null);
     }
 
     public GameResponse joinGame(UUID gameId, UUID playerId) {
-        // Prevent player from being in multiple active games
         UUID existingGame = findGameByPlayer(playerId);
         if (existingGame != null && !existingGame.equals(gameId)) {
             throw new DomainException("error.already_in_game");
@@ -105,15 +112,14 @@ public class GameService {
 
         Game game = getActiveGame(gameId);
         game.join(playerId);
-        gameRepository.save(game); // Persist player2 joining
+        gameRepository.save(game);
 
         String hostUsername = userRepository.findById(game.getPlayer1().getId())
-                .map(u -> u.getUsername()).orElse(null);
+                .map(UserEntity::getUsername).orElse(null);
         return new GameResponse(gameId, game.getRoomCode(), game.getStatus(), "Oponente entrou. Posicione seus navios!", hostUsername);
     }
 
     public GameResponse joinByRoomCode(String roomCode, UUID playerId) {
-        // Prevent player from being in multiple active games
         UUID existingGame = findGameByPlayer(playerId);
         if (existingGame != null) {
             throw new DomainException("error.already_in_game");
@@ -125,7 +131,7 @@ public class GameService {
         gameRepository.save(game);
 
         String hostUsername = userRepository.findById(game.getPlayer1().getId())
-                .map(u -> u.getUsername()).orElse(null);
+                .map(UserEntity::getUsername).orElse(null);
         return new GameResponse(gameId, game.getRoomCode(), game.getStatus(), "Oponente entrou. Posicione seus navios!", hostUsername);
     }
 
@@ -133,13 +139,11 @@ public class GameService {
         Game game = getActiveGame(gameId);
         Coordinate start = new Coordinate(request.row(), request.col());
         game.placeShip(playerId, request.shipType(), start, request.orientation());
-        // No DB save - gameplay state lives in memory only
     }
 
     public void markReady(UUID gameId, UUID playerId) {
         Game game = getActiveGame(gameId);
         game.markReady(playerId);
-        // No DB save - status transition handled in memory
     }
 
     public void unmarkReady(UUID gameId, UUID playerId) {
@@ -157,7 +161,6 @@ public class GameService {
         List<int[]> sunkShipCells = null;
         if (result == ShotResult.SUNK) {
             sunkShipType = findSunkShipAt(game, playerId, target);
-            // Get all coordinates of the sunk ship
             var opponent = game.getPlayer1().getId().equals(playerId)
                     ? game.getPlayer2()
                     : game.getPlayer1();
@@ -175,18 +178,15 @@ public class GameService {
 
         boolean gameOver = game.getStatus() == GameStatus.FINISHED;
 
-        // On game over, reveal all ship positions for both players
         Map<String, List<int[]>> revealedShips = null;
         if (gameOver) {
             revealedShips = new HashMap<>();
-            // Reveal ships of player1's board (for player2 to see)
             for (Ship ship : game.getPlayer1().getBoard().getShips()) {
                 revealedShips.computeIfAbsent(game.getPlayer1().getId().toString(), k -> new ArrayList<>())
                         .addAll(ship.getOccupiedCoordinates().stream()
                                 .map(c -> new int[]{c.row(), c.col()})
                                 .toList());
             }
-            // Reveal ships of player2's board (for player1 to see)
             for (Ship ship : game.getPlayer2().getBoard().getShips()) {
                 revealedShips.computeIfAbsent(game.getPlayer2().getId().toString(), k -> new ArrayList<>())
                         .addAll(ship.getOccupiedCoordinates().stream()
@@ -209,7 +209,6 @@ public class GameService {
      * When the timer expires, an auto-fire is performed for the current turn player.
      */
     public void startTurnTimer(UUID gameId) {
-        // Cancel any existing timer for this game
         cancelTurnTimer(gameId);
 
         Game game = activeGames.get(gameId);
@@ -219,14 +218,12 @@ public class GameService {
 
         UUID currentPlayerId = game.getCurrentTurnPlayerId();
 
-        // Broadcast TURN_TIMER_START event so frontend can show countdown
         Map<String, Object> timerEvent = new HashMap<>();
         timerEvent.put("type", "TURN_TIMER_START");
         timerEvent.put("durationSeconds", TURN_TIMER_SECONDS);
         timerEvent.put("currentPlayerId", currentPlayerId.toString());
         messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) timerEvent);
 
-        // Schedule auto-fire after 20 seconds
         ScheduledFuture<?> future = scheduler.schedule(() -> {
             handleTimerExpiry(gameId, currentPlayerId);
         }, TURN_TIMER_SECONDS, TimeUnit.SECONDS);
@@ -281,21 +278,16 @@ public class GameService {
             Game game = activeGames.get(gameId);
             if (game == null) return;
 
-            // Synchronize on the game object to prevent concurrent modification
             synchronized (game) {
-                // Verify the game is still in progress and it's still the expected player's turn
                 if (game.getStatus() != GameStatus.IN_PROGRESS) return;
                 if (!expectedPlayerId.equals(game.getCurrentTurnPlayerId())) return;
 
-                // Pick a random unattacked cell
                 Coordinate target = getRandomUnattackedCell(gameId, expectedPlayerId);
                 if (target == null) return;
 
-                // Fire
                 FireRequest request = new FireRequest(target.row(), target.col());
                 ShotResponse response = fire(gameId, expectedPlayerId, request);
 
-                // Broadcast SHOT_FIRED event (same format as GameWebSocketController.fire())
                 Map<String, Object> notification = new HashMap<>();
                 notification.put("type", "SHOT_FIRED");
                 notification.put("shooterId", expectedPlayerId.toString());
@@ -312,8 +304,6 @@ public class GameService {
 
                 messagingTemplate.convertAndSend("/topic/game/" + gameId, (Object) notification);
 
-                // If the game is still in progress, start the timer for the next turn
-                // (If HIT/SUNK, same player fires again; if MISS, it switched to opponent)
                 if (!response.gameOver()) {
                     startTurnTimer(gameId);
                 }
@@ -345,7 +335,6 @@ public class GameService {
             return;
         }
 
-        // Only allow cancel before game is in progress
         if (game.getStatus() == GameStatus.IN_PROGRESS || game.getStatus() == GameStatus.FINISHED) {
             throw new DomainException("error.cannot_cancel_in_progress");
         }
@@ -375,7 +364,6 @@ public class GameService {
 
         cancelTurnTimer(gameId);
 
-        // Only count as WO victory if game was in progress
         if (game.getStatus() == GameStatus.IN_PROGRESS) {
             game.forfeit(quitterId);
             gameRepository.save(game);
@@ -385,7 +373,6 @@ public class GameService {
             return game;
         }
 
-        // WAITING_FOR_OPPONENT or PLACING_SHIPS: just cancel, no winner
         activeGames.remove(gameId);
         jpaGameRepository.deleteById(gameId);
         metrics.gameRemoved();
@@ -423,7 +410,6 @@ public class GameService {
         var player = game.getPlayer1().getId().equals(playerId) ? game.getPlayer1() : game.getPlayer2();
         var opponent = game.getPlayer1().getId().equals(playerId) ? game.getPlayer2() : game.getPlayer1();
 
-        // My ships
         List<ReconnectResponse.ShipData> myShips = new ArrayList<>();
         for (Ship ship : player.getBoard().getShips()) {
             myShips.add(new ReconnectResponse.ShipData(
@@ -434,7 +420,6 @@ public class GameService {
             ));
         }
 
-        // Shots I fired at enemy (opponent's board shots)
         List<ReconnectResponse.ShotData> myShots = new ArrayList<>();
         if (opponent != null) {
             for (var entry : opponent.getBoard().getShots().entrySet()) {
@@ -446,7 +431,6 @@ public class GameService {
             }
         }
 
-        // Shots enemy fired at me (my board shots)
         List<ReconnectResponse.ShotData> enemyShots = new ArrayList<>();
         for (var entry : player.getBoard().getShots().entrySet()) {
             enemyShots.add(new ReconnectResponse.ShotData(
@@ -456,7 +440,6 @@ public class GameService {
             ));
         }
 
-        // Sunk enemy ships
         List<String> sunkEnemyShips = new ArrayList<>();
         if (opponent != null) {
             for (Ship ship : opponent.getBoard().getShips()) {
@@ -466,7 +449,6 @@ public class GameService {
             }
         }
 
-        // My sunk ships
         List<String> sunkMyShips = new ArrayList<>();
         for (Ship ship : player.getBoard().getShips()) {
             if (ship.isSunk()) {
@@ -479,7 +461,7 @@ public class GameService {
         boolean myReady = player.isReady();
 
         String opponentUsername = opponent != null
-                ? userRepository.findById(opponent.getId()).map(u -> u.getUsername()).orElse("Oponente")
+                ? userRepository.findById(opponent.getId()).map(UserEntity::getUsername).orElse("Oponente")
                 : null;
 
         return new ReconnectResponse(
