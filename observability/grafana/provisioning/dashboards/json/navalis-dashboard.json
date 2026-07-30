@@ -255,5 +255,5 @@
   "time": { "from": "now-30m", "to": "now" },
   "title": "Navalis - Game Monitoring",
   "uid": "navalis-monitoring",
-  "version": 2
+  "version": 4
 }
