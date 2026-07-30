@@ -1,3 +1,7 @@
+networks:
+  aw-network:
+    driver: bridge
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -16,6 +20,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - aw-network
 
   backend:
     build:
@@ -34,6 +40,8 @@ services:
       MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
     ports:
       - "5000:5000"
+    networks:
+      - aw-network
 
   # === OBSERVABILIDADE ===
 
@@ -48,6 +56,8 @@ services:
       - "9090:9090"
     depends_on:
       - backend
+    networks:
+      - aw-network
 
   grafana:
     image: grafana/grafana:11.1.0
@@ -63,6 +73,8 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+    networks:
+      - aw-network
 
   zipkin:
     image: openzipkin/zipkin:3.4
@@ -70,6 +82,8 @@ services:
     restart: unless-stopped
     ports:
       - "9411:9411"
+    networks:
+      - aw-network
 
 volumes:
   postgres_data:
