@@ -123,7 +123,4 @@ public class MetricsConfig {
         onlinePlayersGauge.set(allOnline.size());
     }
 
-    public void setActiveGames(int count) {
-        activeGamesGauge.set(count);
-    }
 }

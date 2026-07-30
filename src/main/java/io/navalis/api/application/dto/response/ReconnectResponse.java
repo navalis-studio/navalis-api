@@ -11,10 +11,10 @@ public record ReconnectResponse(
         GameStatus status,
         boolean myTurn,
         List<ShipData> myShips,
-        List<ShotData> myShots,       // shots I fired at enemy
-        List<ShotData> enemyShots,    // shots enemy fired at me
-        List<String> sunkEnemyShips,  // enemy ships I've sunk
-        List<String> sunkMyShips,     // my ships that are sunk
+        List<ShotData> myShots,
+        List<ShotData> enemyShots,
+        List<String> sunkEnemyShips,
+        List<String> sunkMyShips,
         boolean opponentReady,
         boolean myReady,
         String opponentUsername
