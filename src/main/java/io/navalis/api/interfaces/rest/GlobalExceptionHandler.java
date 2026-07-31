@@ -18,6 +18,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(GameAlreadyFullException.class)
     public ResponseEntity<Map<String, Object>> handleGameFull(GameAlreadyFullException ex) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
@@ -64,6 +66,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
+        logger.error("Unhandled exception", ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "error.internal_server");
     }
 
