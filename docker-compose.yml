@@ -38,6 +38,7 @@ services:
       CHAVE_POSTGRES_PASSWORD: ${CHAVE_POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      LOKI_HOST: loki
     ports:
       - "5000:5000"
     networks:
@@ -85,7 +86,20 @@ services:
     networks:
       - aw-network
 
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: navalis-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    networks:
+      - aw-network
+
 volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  loki_data:
