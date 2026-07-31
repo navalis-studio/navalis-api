@@ -247,6 +247,155 @@
           }
         }
       }
+    },
+    {
+      "title": "Connection Pool (HikariCP)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{application=\"navalis-api\"}",
+          "legendFormat": "Active"
+        },
+        {
+          "expr": "hikaricp_connections_idle{application=\"navalis-api\"}",
+          "legendFormat": "Idle"
+        },
+        {
+          "expr": "hikaricp_connections_pending{application=\"navalis-api\"}",
+          "legendFormat": "Pending"
+        },
+        {
+          "expr": "hikaricp_connections_max{application=\"navalis-api\"}",
+          "legendFormat": "Max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "title": "Connection Acquire Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(hikaricp_connections_acquire_seconds_sum{application=\"navalis-api\"}[1m]) / rate(hikaricp_connections_acquire_seconds_count{application=\"navalis-api\"}[1m])",
+          "legendFormat": "Avg Acquire Time"
+        },
+        {
+          "expr": "hikaricp_connections_acquire_seconds_max{application=\"navalis-api\"}",
+          "legendFormat": "Max Acquire Time"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2
+          }
+        }
+      }
+    },
+    {
+      "title": "Connection Usage Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(hikaricp_connections_usage_seconds_sum{application=\"navalis-api\"}[1m]) / rate(hikaricp_connections_usage_seconds_count{application=\"navalis-api\"}[1m])",
+          "legendFormat": "Avg Usage Time"
+        },
+        {
+          "expr": "hikaricp_connections_usage_seconds_max{application=\"navalis-api\"}",
+          "legendFormat": "Max Usage Time"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2
+          }
+        }
+      }
+    },
+    {
+      "title": "Connection Timeouts",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_timeout_total{application=\"navalis-api\"}",
+          "legendFormat": "Timeouts"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Repository Operations (rate/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 10, "x": 4, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(repository_game_seconds_count{application=\"navalis-api\"}[1m])) by (method)",
+          "legendFormat": "{{method}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "title": "Repository Latency (max)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "repository_game_seconds_max{application=\"navalis-api\"}",
+          "legendFormat": "{{method}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2
+          }
+        }
+      }
     }
   ],
   "schemaVersion": 39,

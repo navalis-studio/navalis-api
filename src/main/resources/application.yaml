@@ -18,6 +18,7 @@ spring:
       hibernate:
         format_sql: true
         session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 100
+        generate_statistics: true
   flyway:
     enabled: true
   web:
