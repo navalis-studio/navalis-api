@@ -5,7 +5,7 @@
 ![Status](https://img.shields.io/badge/Status-completed-green)
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.7-green)
-![Database](https://img.shields.io/badge/Database-PostgreSQL%2016-blue)
+![Database](https://img.shields.io/badge/Database-PostgreSQL-blue)
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@
 | Spring Boot 4.0.7 | Web framework |
 | Spring Security + JWT | Authentication and authorization |
 | Spring Data JPA + Hibernate 7 | Database mapping |
-| PostgreSQL 16 | Relational database |
+| PostgreSQL | Relational database |
 | Flyway | Database migrations |
 | WebSocket/STOMP | Real-time gameplay communication |
 | Lombok | Boilerplate reduction |
@@ -147,7 +147,7 @@ Base URL: `http://localhost:5000/api`
 ### Prerequisites
 
 - Java 21+
-- PostgreSQL 16 running
+- PostgreSQL running
 - Maven (or use the included wrapper `./mvnw`)
 
 ### 1) Clone and access the project
